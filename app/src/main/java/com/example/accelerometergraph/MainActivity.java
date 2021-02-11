@@ -38,11 +38,18 @@ public class MainActivity extends AppCompatActivity
             Color.GREEN,
             Color.BLUE};
 
+    TextView textView;
     Button buttonStart;
     Button buttonStop;
     Button buttonChange;
 
     float[] accArray = new float[3];
+    float[] gravity = new float[3];
+    float[] linear_acceleration = new float[3];
+
+    boolean filter = false;
+
+    final float ALPHA = 0.8f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +60,7 @@ public class MainActivity extends AppCompatActivity
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
         setChart();
+        setTextView();
         setButton();
     }
 
@@ -76,6 +84,14 @@ public class MainActivity extends AppCompatActivity
                 accArray[0] = sensorEvent.values[0];
                 accArray[1] = sensorEvent.values[1];
                 accArray[2] = sensorEvent.values[2];
+
+                gravity[0] = ALPHA * gravity[0] + (1 - ALPHA) * sensorEvent.values[0];
+                gravity[1] = ALPHA * gravity[1] + (1 - ALPHA) * sensorEvent.values[1];
+                gravity[2] = ALPHA * gravity[2] + (1 - ALPHA) * sensorEvent.values[2];
+                linear_acceleration[0] = sensorEvent.values[0] - gravity[0];
+                linear_acceleration[1] = sensorEvent.values[1] - gravity[1];
+                linear_acceleration[2] = sensorEvent.values[2] - gravity[2];
+
                 LineData data = mChart.getLineData();
                 if (data != null) {
                     for (int i = 0; i < 3; i++) {
@@ -89,7 +105,11 @@ public class MainActivity extends AppCompatActivity
                             set3 = set;
                             data.addDataSet(set3);
                         }
-                        data.addEntry(new Entry(set3.getEntryCount(), accArray[i]), i);
+                        if(!filter) {
+                            data.addEntry(new Entry(set3.getEntryCount(), accArray[i]), i);
+                        }else{
+                            data.addEntry(new Entry(set3.getEntryCount(), linear_acceleration[i]), i);
+                        }
                         data.notifyDataChanged();
                     }
                     mChart.notifyDataSetChanged();
@@ -124,6 +144,11 @@ public class MainActivity extends AppCompatActivity
         mChart.getAxisRight().setEnabled(false);
     }
 
+    void setTextView(){
+        textView = findViewById(R.id.text_view);
+        textView.setText("Filter Off");
+    }
+
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
@@ -135,6 +160,13 @@ public class MainActivity extends AppCompatActivity
                 sensorManager.unregisterListener(this);
                 break;
             case R.id.button_change:
+                if(filter){
+                    filter = false;
+                    textView.setText("Filter Off");
+                }else{
+                    filter = true;
+                    textView.setText("Filter On");
+                }
         }
 
     }
